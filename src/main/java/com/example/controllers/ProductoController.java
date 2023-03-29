@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,8 +51,8 @@ private ProductoService productoService;
 // o no, pero en cualquier caso ordenados por un criterio (nombre, descripcion,etc). Seria un RequestParam
 ///productos/3 => @PathVariable
 @GetMapping
-public ResponseEntity<List<Producto>> findAll(@RequestParam(name = "page", required = false) int page,
-                                             @RequestParam(name = "size", required = false) int size) {
+public ResponseEntity<List<Producto>> findAll(@RequestParam(name = "page", required = false) Integer page,
+                                             @RequestParam(name = "size", required = false) Integer size) {
 
     ResponseEntity<List<Producto>> responseEntity = null;
     List<Producto> productos = new ArrayList<>();
@@ -59,19 +60,30 @@ public ResponseEntity<List<Producto>> findAll(@RequestParam(name = "page", requi
     Sort sortByNombre = Sort.by("nombre");
 
 
-    if (page != 0 && size != 0) {
+    if (page != null && size != null) {
 
         // Con paginacion y ordenamiento
         try {
-            Pageable pageable = PageRequest.of(page, size, sortByNombre)
+            Pageable pageable = PageRequest.of(page, size, sortByNombre);
             Page<Producto> productosPaginados = productoService.findAll(pageable);
+            productos = productosPaginados.getContent(); //Saca el contenido de productos
+            responseEntity = new ResponseEntity<List<Producto>>(productos, HttpStatus.OK);//se devuelve al que ha hecho la petición devolviendo un responseEntity
 
         } catch (Exception e) {
+            responseEntity = new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 
         }
 
     } else {
         //Sin paginacion pero con ordenamiento
+        try {
+            productos = productoService.findAll(sortByNombre);
+            responseEntity = new ResponseEntity<List<Producto>>(productos, HttpStatus.OK);//se devuelve al que ha hecho la petición devolviendo un responseEntity
+
+        } catch (Exception e) {
+            responseEntity = new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+        }
     }
 
     return responseEntity;
