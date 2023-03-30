@@ -340,6 +340,43 @@ public class ProductoController {
          //La presentación no se guarda porque no hay capas de Service de
          return responseEntity;
      }
+
+     /**
+      * Método de eliminar de Victor
+
+      @DeleteMapping("/{id}")
+     public ResponseEntity<String> delete(@PathVariable(name="id")Integer id) {
+
+        ResponseEntity<String> responseEntity = null;
+
+        //Primero se recupera el producto
+
+        try {
+
+            Producto producto = productoService.findById(id);
+
+            if(producto != null) {
+                productoService.delete(producto);
+                responseEntity = new ResponseEntity<String>(body: "Borrado exitosamente", HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<String>(body: "No existe el producto", HttpStatus.NOT_FOUND);
+
+            }
+        } catch (DataAccessException e) {
+         e.getMostSpecificCause();
+        responseEntity = new ResponseEntity<String>(body: "Error fatal", HttpStatus.INTERNAL_SERVER_ERROR);
+
+        }
+        return responseEntity;
+
+
+     }
+
+
+      */
+
+
     
     /**
      * El método siguiente es de ejemplo para entender mejor el formato JSON,
