@@ -1,27 +1,33 @@
 package com.example.controllers;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.entities.Producto;
 import com.example.services.ProductoService;
+
+import jakarta.validation.Valid;
 
 /**
  * Crear un backend fuerte, peticion en formato JSON, petición para mandar y recibir.
@@ -41,7 +47,7 @@ import com.example.services.ProductoService;
  */
 
  @RestController //Devuelve un JSON
- @RequestMapping("/productos") //El recurso es productos nada más
+ @RequestMapping("/productos") //END POINT, Importante en API REST - El recurso es productos nada más
 public class ProductoController {
 
 //El servidor debe responder a la petición, se debe crear un ENUM HTTP Status
@@ -131,6 +137,59 @@ public ResponseEntity<Map<String,Object>> findById(@PathVariable(name = "id") In
 
 }
 
+/**
+ * Persiste un producto en la base de datos
+ */
+@PostMapping //Viene dentro de la petición
+@Transactional
+public ResponseEntity<Map<String,Object>> insert(@Valid @RequestBody Producto producto, BindingResult result) { //En el cuerpo de la peticion va un objeto
+    Map<String, Object> responseAsMap = new HashMap<>();
+
+    ResponseEntity<Map<String, Object>> responseEntity = null;
+
+    /**
+     * Primero: Comprobar si hay errores en el producto recibido - VALIDACION
+     */
+
+     if (result.hasErrors()) {
+        List<String> errorMessage = new ArrayList<>();
+
+        for(ObjectError error : result.getAllErrors()) {
+            errorMessage.add(error.getDefaultMessage()); //Muestras los mensajes de la Entity Producto
+            
+        }
+        responseAsMap.put("errores", errorMessage);
+
+        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.BAD_REQUEST); 
+        return responseEntity;
+     }
+
+     Producto productoDataBase = productoService.save(producto);
+     try {
+    if(productoDataBase != null)  {
+       String mensaje = "El producto se ha creado correctamente";
+       responseAsMap.put("mensaje", mensaje);
+       responseAsMap.put("producto", productoDataBase);
+       responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap,HttpStatus.CREATED);
+    } else {
+        //No se ha creado el producto
+        String mensaje2 = "El producto no se ha creado";
+        responseAsMap.put("mensaje", mensaje2);
+        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap,HttpStatus.INTERNAL_SERVER_ERROR);
+    } }catch (DataAccessException e) { 
+        String errorGrave = "Ha tenido lugar un error grave" + "la causa puede ser "
+        + e.getMostSpecificCause(); // especifica la causa especifica del error.
+        responseAsMap.put("errorGrave", errorGrave);
+
+        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+     }
+
+
+    
+
+     //Si no hay errores se ejecuta este return, se persiste el producto
+    return responseEntity;
+}
 
     /**
      * El método siguiente es de ejemplo para entender mejor el formato JSON,
