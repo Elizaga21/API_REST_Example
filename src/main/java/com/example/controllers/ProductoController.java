@@ -269,7 +269,8 @@ public class ProductoController {
             responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        // Si no hay errores se ejecuta este return, se persiste el producto
+        // Si no hay errores se ejecuta este return, se actualiza el producto
+        //La presentación no se guarda porque no hay capas de Service de Presentacion
         return responseEntity;
     }
 
