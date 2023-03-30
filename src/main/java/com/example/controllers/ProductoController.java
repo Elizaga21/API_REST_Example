@@ -19,6 +19,7 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,177 +31,258 @@ import com.example.services.ProductoService;
 import jakarta.validation.Valid;
 
 /**
- * Crear un backend fuerte, peticion en formato JSON, petición para mandar y recibir.
- * JavaScript Object Notation (JSON). Un objeto de java es el mismo que un objeto en JSON simplemente
+ * Crear un backend fuerte, peticion en formato JSON, petición para mandar y
+ * recibir.
+ * JavaScript Object Notation (JSON). Un objeto de java es el mismo que un
+ * objeto en JSON simplemente
  * cambia la sintaxis, se añade comillas en las propiedades, por ejemplo:
  * JavaScript:
  * persona = {
- *   nombre:"Victor"
- *   apellidos:"Machado"
+ * nombre:"Victor"
+ * apellidos:"Machado"
  * JSON:
  * persona = {
- *   "nombre":"Victor"
- *   "apellidos":"Machado"
+ * "nombre":"Victor"
+ * "apellidos":"Machado"
  * 
- * API REST: Gestiona recursos y en dependencia del verbo HTTP estaras pidiendo una peticion concreta
+ * API REST: Gestiona recursos y en dependencia del verbo HTTP estaras pidiendo
+ * una peticion concreta
  * }
  */
 
- @RestController //Devuelve un JSON
- @RequestMapping("/productos") //END POINT, Importante en API REST - El recurso es productos nada más
+@RestController // Devuelve un JSON
+@RequestMapping("/productos") // END POINT, Importante en API REST - El recurso es productos nada más
 public class ProductoController {
 
-//El servidor debe responder a la petición, se debe crear un ENUM HTTP Status
+    // El servidor debe responder a la petición, se debe crear un ENUM HTTP Status
 
-@Autowired
-private ProductoService productoService;
+    @Autowired
+    private ProductoService productoService;
 
-//Este método devuelve los productos paginados o no paginados, Responde a una Request del tipo
-//http://localhost:8080/productos?page=1&size=4
-//Pagina 1 y 4 productos. Es decir, tiene que ser capaz de devolver un listado de productos paginados
-// o no, pero en cualquier caso ordenados por un criterio (nombre, descripcion,etc). Seria un RequestParam
-///productos/3 => @PathVariable
-@GetMapping
-public ResponseEntity<List<Producto>> findAll(@RequestParam(name = "page", required = false) Integer page,
-                                             @RequestParam(name = "size", required = false) Integer size) {
+    // Este método devuelve los productos paginados o no paginados, Responde a una
+    // Request del tipo
+    // http://localhost:8080/productos?page=1&size=4
+    // Pagina 1 y 4 productos. Es decir, tiene que ser capaz de devolver un listado
+    // de productos paginados
+    // o no, pero en cualquier caso ordenados por un criterio (nombre,
+    // descripcion,etc). Seria un RequestParam
+    /// productos/3 => @PathVariable
+    @GetMapping
+    public ResponseEntity<List<Producto>> findAll(@RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size) {
 
-    ResponseEntity<List<Producto>> responseEntity = null;
-    List<Producto> productos = new ArrayList<>();
+        ResponseEntity<List<Producto>> responseEntity = null;
+        List<Producto> productos = new ArrayList<>();
 
-    Sort sortByNombre = Sort.by("nombre");
+        Sort sortByNombre = Sort.by("nombre");
 
+        if (page != null && size != null) {
 
-    if (page != null && size != null) {
+            // Con paginacion y ordenamiento
+            try {
+                Pageable pageable = PageRequest.of(page, size, sortByNombre);
+                Page<Producto> productosPaginados = productoService.findAll(pageable);
+                productos = productosPaginados.getContent(); // Saca el contenido de productos
+                responseEntity = new ResponseEntity<List<Producto>>(productos, HttpStatus.OK);// se devuelve al que ha
+                                                                                              // hecho la petición
+                                                                                              // devolviendo un
+                                                                                              // responseEntity
 
-        // Con paginacion y ordenamiento
-        try {
-            Pageable pageable = PageRequest.of(page, size, sortByNombre);
-            Page<Producto> productosPaginados = productoService.findAll(pageable);
-            productos = productosPaginados.getContent(); //Saca el contenido de productos
-            responseEntity = new ResponseEntity<List<Producto>>(productos, HttpStatus.OK);//se devuelve al que ha hecho la petición devolviendo un responseEntity
+            } catch (Exception e) {
+                responseEntity = new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 
-        } catch (Exception e) {
-            responseEntity = new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
 
+        } else {
+            // Sin paginacion pero con ordenamiento
+            try {
+                productos = productoService.findAll(sortByNombre);
+                responseEntity = new ResponseEntity<List<Producto>>(productos, HttpStatus.OK);// se devuelve al que ha
+                                                                                              // hecho la petición
+                                                                                              // devolviendo un
+                                                                                              // responseEntity
+
+            } catch (Exception e) {
+                responseEntity = new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+            }
         }
 
-    } else {
-        //Sin paginacion pero con ordenamiento
-        try {
-            productos = productoService.findAll(sortByNombre);
-            responseEntity = new ResponseEntity<List<Producto>>(productos, HttpStatus.OK);//se devuelve al que ha hecho la petición devolviendo un responseEntity
+        return responseEntity;
 
-        } catch (Exception e) {
-            responseEntity = new ResponseEntity<>(HttpStatus.NO_CONTENT);
-
-        }
     }
-
-    return responseEntity;
-
-}
-/**
- * Recupera un producto por el id.
- * Va a responder a una peticion del tipo, por ejemplo:
- * http://localhost:8080/productos/2
- */
-@GetMapping("/{id}")
-public ResponseEntity<Map<String,Object>> findById(@PathVariable(name = "id") Integer id) {
-
-    ResponseEntity<Map<String, Object>> responseEntity = null;
-    Map<String,Object> responseAsMap = new HashMap<>(); //Para mandar un status + un mensaje se debe crear un mapa
-
-    Map<String,Object> responseAsError = new HashMap<>();
-    
-    try {
-        Producto producto = productoService.findById(id);
-
-        if (producto != null) {
-        String successMessage = "Se ha encontrado el producto con id: " + id;
-        responseAsMap.put("mensaje", successMessage);
-        responseAsMap.put("producto", producto);
-        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.OK);
-
-    } else { 
-        String errorMessage = "No se ha encontrado el producto con id:";
-    responseAsMap.put("error", errorMessage);
-    responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.NOT_FOUND);
-    }
-
-    } catch (Exception e) {
-        String errorGrave = "Error grave";
-        responseAsMap.put("error", errorGrave);
-        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    return responseEntity;
-
-}
-
-/**
- * Persiste un producto en la base de datos
- */
-@PostMapping //Viene dentro de la petición
-@Transactional
-public ResponseEntity<Map<String,Object>> insert(@Valid @RequestBody Producto producto, BindingResult result) { //En el cuerpo de la peticion va un objeto
-    Map<String, Object> responseAsMap = new HashMap<>();
-
-    ResponseEntity<Map<String, Object>> responseEntity = null;
 
     /**
-     * Primero: Comprobar si hay errores en el producto recibido - VALIDACION
+     * Recupera un producto por el id.
+     * Va a responder a una peticion del tipo, por ejemplo:
+     * http://localhost:8080/productos/2
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> findById(@PathVariable(name = "id") Integer id) {
+
+        ResponseEntity<Map<String, Object>> responseEntity = null;
+        Map<String, Object> responseAsMap = new HashMap<>(); // Para mandar un status + un mensaje se debe crear un mapa
+
+        Map<String, Object> responseAsError = new HashMap<>();
+
+        try {
+            Producto producto = productoService.findById(id);
+
+            if (producto != null) {
+                String successMessage = "Se ha encontrado el producto con id: " + id;
+                responseAsMap.put("mensaje", successMessage);
+                responseAsMap.put("producto", producto);
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.OK);
+
+            } else {
+                String errorMessage = "No se ha encontrado el producto con id:";
+                responseAsMap.put("error", errorMessage);
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.NOT_FOUND);
+            }
+
+        } catch (Exception e) {
+            String errorGrave = "Error grave";
+            responseAsMap.put("error", errorGrave);
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return responseEntity;
+
+    }
+
+    /**
+     * Persiste un producto en la base de datos
+     */
+    @PostMapping // Viene dentro de la petición, no viene parámetros con el POST
+    @Transactional
+    public ResponseEntity<Map<String, Object>> insert(@Valid @RequestBody Producto producto, BindingResult result) { // En
+                                                                                                                     // el
+                                                                                                                     // cuerpo
+                                                                                                                     // de
+                                                                                                                     // la
+                                                                                                                     // peticion
+                                                                                                                     // va
+                                                                                                                     // un
+                                                                                                                     // objeto
+        Map<String, Object> responseAsMap = new HashMap<>();
+
+        ResponseEntity<Map<String, Object>> responseEntity = null;
+
+        /**
+         * Primero: Comprobar si hay errores en el producto recibido - VALIDACION
+         */
+
+        if (result.hasErrors()) {
+            List<String> errorMessage = new ArrayList<>();
+
+            for (ObjectError error : result.getAllErrors()) {
+                errorMessage.add(error.getDefaultMessage()); // Muestras los mensajes de la Entity Producto
+
+            }
+            responseAsMap.put("errores", errorMessage);
+
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+            return responseEntity;
+        }
+
+        Producto productoDataBase = productoService.save(producto);
+        try {
+            if (productoDataBase != null) {
+                String mensaje = "El producto se ha creado correctamente";
+                responseAsMap.put("mensaje", mensaje);
+                responseAsMap.put("producto", productoDataBase);
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.CREATED);
+            } else {
+                // No se ha creado el producto
+                String mensaje2 = "El producto no se ha creado";
+                responseAsMap.put("mensaje", mensaje2);
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap,
+                        HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (DataAccessException e) {
+            String errorGrave = "Ha tenido lugar un error grave" + "la causa puede ser "
+                    + e.getMostSpecificCause(); // especifica la causa especifica del error.
+            responseAsMap.put("errorGrave", errorGrave);
+
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        // Si no hay errores se ejecuta este return, se persiste el producto
+        return responseEntity;
+    }
+
+    /**
+     * Método para actualizar un producto
      */
 
-     if (result.hasErrors()) {
-        List<String> errorMessage = new ArrayList<>();
+    @PutMapping("/{id}") // Modificar
+    @Transactional
+    public ResponseEntity<Map<String, Object>> update(@Valid @RequestBody Producto producto, BindingResult result,
+            @PathVariable(name = "id") Integer id) { // En el cuerpo de la peticion va un objeto
 
-        for(ObjectError error : result.getAllErrors()) {
-            errorMessage.add(error.getDefaultMessage()); //Muestras los mensajes de la Entity Producto
-            
+        Map<String, Object> responseAsMap = new HashMap<>();
+
+        ResponseEntity<Map<String, Object>> responseEntity = null;
+
+        /**
+         * Primero: Comprobar si hay errores en el producto recibido - VALIDACION
+         */
+
+        if (result.hasErrors()) {
+            List<String> errorMessage = new ArrayList<>();
+
+            for (ObjectError error : result.getAllErrors()) {
+                errorMessage.add(error.getDefaultMessage()); // Muestras los mensajes de la Entity Producto
+
+            }
+            responseAsMap.put("errores", errorMessage);
+
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+            return responseEntity;
         }
-        responseAsMap.put("errores", errorMessage);
 
-        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.BAD_REQUEST); 
+        // Si no hay errores, persistimos el producto
+        // Vinculando previamente el id que se recibe con el producto
+
+        producto.setId(id); // En el JSON, con el save se modifica ese elemento
+        Producto productoDataBase = productoService.save(producto);
+
+        try {
+
+            if (productoDataBase != null) {
+                String mensaje = "El producto se ha actualizado correctamente";
+                responseAsMap.put("mensaje", mensaje);
+                responseAsMap.put("producto", productoDataBase);
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.OK);
+            } else {
+                // No se ha actualizado el producto
+                String mensaje2 = "El producto no se ha actualizado";
+                responseAsMap.put("mensaje", mensaje2);
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap,
+                        HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (DataAccessException e) {
+            String errorGrave = "Ha tenido lugar un error grave" + "la causa puede ser "
+                    + e.getMostSpecificCause(); // especifica la causa especifica del error.
+            responseAsMap.put("errorGrave", errorGrave);
+
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        // Si no hay errores se ejecuta este return, se persiste el producto
         return responseEntity;
-     }
-
-     Producto productoDataBase = productoService.save(producto);
-     try {
-    if(productoDataBase != null)  {
-       String mensaje = "El producto se ha creado correctamente";
-       responseAsMap.put("mensaje", mensaje);
-       responseAsMap.put("producto", productoDataBase);
-       responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap,HttpStatus.CREATED);
-    } else {
-        //No se ha creado el producto
-        String mensaje2 = "El producto no se ha creado";
-        responseAsMap.put("mensaje", mensaje2);
-        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap,HttpStatus.INTERNAL_SERVER_ERROR);
-    } }catch (DataAccessException e) { 
-        String errorGrave = "Ha tenido lugar un error grave" + "la causa puede ser "
-        + e.getMostSpecificCause(); // especifica la causa especifica del error.
-        responseAsMap.put("errorGrave", errorGrave);
-
-        responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
-     }
-
-
-    
-
-     //Si no hay errores se ejecuta este return, se persiste el producto
-    return responseEntity;
-}
+    }
 
     /**
      * El método siguiente es de ejemplo para entender mejor el formato JSON,
      * no tiene que ver en sí con el proyecto.
      */
 
-    //  @GetMapping
-    //  public List<String> nombres() {
-    //     List<String> nombres = Arrays.asList("Salma", "Judith" , "Elisabet");
-    //     return nombres;
+    // @GetMapping
+    // public List<String> nombres() {
+    // List<String> nombres = Arrays.asList("Salma", "Judith" , "Elisabet");
+    // return nombres;
 
-    //  }
-    
+    // }
+
 }
