@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -210,7 +211,6 @@ public class ProductoController {
         // Si no hay errores se ejecuta este return, se persiste el producto
         return responseEntity;
     }
-
     /**
      * Método para actualizar un producto
      */
@@ -270,10 +270,77 @@ public class ProductoController {
         }
 
         // Si no hay errores se ejecuta este return, se actualiza el producto
-        //La presentación no se guarda porque no hay capas de Service de Presentacion
+        //La presentación no se guarda porque no hay capas de Service de
         return responseEntity;
     }
 
+    
+    /**
+     * Método de eliminar producto
+     */
+
+     @DeleteMapping("/{id}") // Modificar
+     @Transactional
+     public ResponseEntity<Map<String, Object>> delete (@Valid @RequestBody Producto producto, BindingResult result,
+             @PathVariable(name = "id") Integer id) { // En el cuerpo de la peticion va un objeto
+ 
+         Map<String, Object> responseAsMap = new HashMap<>();
+ 
+         ResponseEntity<Map<String, Object>> responseEntity = null;
+ 
+         /**
+          * Primero: Comprobar si hay errores en el producto recibido - VALIDACION
+          */
+
+ 
+         if (result.hasErrors()) {
+             List<String> errorMessage = new ArrayList<>();
+ 
+             for (ObjectError error : result.getAllErrors()) {
+                 errorMessage.add(error.getDefaultMessage()); // Muestras los mensajes de la Entity Producto
+ 
+             }
+             responseAsMap.put("errores", errorMessage);
+ 
+             responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+             return responseEntity;
+         }
+ 
+         // Si no hay errores, eliminamos el producto
+         // Vinculando previamente el id que se recibe con el producto
+ 
+         //producto.setId(id); // En el JSON, con el save se modifica ese elemento
+
+         Producto productoDataBase = productoService.findById(id);
+ 
+         try {
+ 
+             if (productoDataBase != null) {
+                 String mensaje = "El producto se ha eliminado correctamente";
+                 productoService.delete(productoDataBase);
+                 responseAsMap.put("mensaje", mensaje);
+                 responseAsMap.put("producto", productoDataBase);
+                 responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.OK);
+             } else {
+                 // No se ha actualizado el producto
+                 String mensaje2 = "El producto no se ha borrado";
+                 responseAsMap.put("mensaje", mensaje2);
+                 responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap,
+                         HttpStatus.INTERNAL_SERVER_ERROR);
+             }
+         } catch (DataAccessException e) {
+             String errorGrave = "Ha tenido lugar un error grave" + "la causa puede ser "
+                     + e.getMostSpecificCause(); // especifica la causa especifica del error.
+             responseAsMap.put("errorGrave", errorGrave);
+ 
+             responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+         }
+ 
+         // Si no hay errores se ejecuta este return, se actualiza el producto
+         //La presentación no se guarda porque no hay capas de Service de
+         return responseEntity;
+     }
+    
     /**
      * El método siguiente es de ejemplo para entender mejor el formato JSON,
      * no tiene que ver en sí con el proyecto.
