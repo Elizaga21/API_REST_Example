@@ -1,5 +1,6 @@
 package com.example.controllers;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,9 +26,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.entities.Producto;
 import com.example.services.ProductoService;
+import com.example.utilities.FileUploadUtil;
 
 import jakarta.validation.Valid;
 
@@ -59,6 +62,9 @@ public class ProductoController {
 
     @Autowired
     private ProductoService productoService;
+
+    @Autowired
+    private FileUploadUtil fileUploadUtil;
 
     // Este método devuelve los productos paginados o no paginados, Responde a una
     // Request del tipo
@@ -153,18 +159,20 @@ public class ProductoController {
 
     /**
      * Persiste un producto en la base de datos
+     * 
+     * // Guardar (Persistir), un producto, con su presentacion en la base de datos
+     Para probarlo con POSTMAN: Body -> form-data -> producto -> CONTENT TYPE ->
+     application/json
+     no se puede dejar el content type en Auto, porque de lo contrario asume
+     application/octet-stream
+     y genera una exception MediaTypeNotSupported
+     * @throws IOException
      */
-    @PostMapping // Viene dentro de la petición, no viene parámetros con el POST
+    @PostMapping(consumes = "multipart/form-data") //El consumes es para añadir imagenes y otro tipo de documentos - Viene dentro de la petición, no viene parámetros con el POST
     @Transactional
-    public ResponseEntity<Map<String, Object>> insert(@Valid @RequestBody Producto producto, BindingResult result) { // En
-                                                                                                                     // el
-                                                                                                                     // cuerpo
-                                                                                                                     // de
-                                                                                                                     // la
-                                                                                                                     // peticion
-                                                                                                                     // va
-                                                                                                                     // un
-                                                                                                                     // objeto
+    public ResponseEntity<Map<String, Object>> insert(@Valid @RequestBody Producto producto, BindingResult result,
+    @RequestParam(name = "file") MultipartFile file) throws IOException { // En el cuepo de la peticion va el objeto
+                                                                                                                    
         Map<String, Object> responseAsMap = new HashMap<>();
 
         ResponseEntity<Map<String, Object>> responseEntity = null;
@@ -184,6 +192,12 @@ public class ProductoController {
 
             responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
             return responseEntity;
+        }
+
+        //Si no hay errores persistimos el producto, comprobando previamente si nos han enviado un archivo o imagen
+        if (!file.isEmpty()) {
+            String fileCode = fileUploadUtil.saveFile(file.getOriginalFilename(), file);
+            producto.setImagenProducto(fileCode + "-" + file.getOriginalFilename());
         }
 
         Producto productoDataBase = productoService.save(producto);
