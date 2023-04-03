@@ -7,12 +7,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
@@ -32,9 +35,11 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.entities.Producto;
 import com.example.model.FileUploadResponse;
 import com.example.services.ProductoService;
+import com.example.utilities.FileDownloadUtil;
 import com.example.utilities.FileUploadUtil;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Crear un backend fuerte, peticion en formato JSON, petición para mandar y
@@ -58,6 +63,7 @@ import jakarta.validation.Valid;
 
 @RestController // Devuelve un JSON
 @RequestMapping("/productos") // END POINT, Importante en API REST - El recurso es productos nada más
+@RequiredArgsConstructor
 public class ProductoController {
 
     // El servidor debe responder a la petición, se debe crear un ENUM HTTP Status
@@ -67,6 +73,12 @@ public class ProductoController {
 
     @Autowired
     private FileUploadUtil fileUploadUtil;
+
+    // La siguiente dependencia se inyectará por constructor añadiendo al principio @RequiredArgsConstructor
+   // @Autowired
+   // private FileDownloadUtil fileDownloadUtil;
+
+   private final FileDownloadUtil fileDownloadUtil;
 
     // Este método devuelve los productos paginados o no paginados, Responde a una
     // Request del tipo
@@ -369,6 +381,34 @@ public class ProductoController {
          //La presentación no se guarda porque no hay capas de Service de
          return responseEntity;
      }
+
+       /**
+     *  Implementa filedownnload end point API 
+     **/    
+    @GetMapping("/downloadFile/{fileCode}")
+    public ResponseEntity<?> downloadFile(@PathVariable(name = "fileCode") String fileCode) {
+
+        Resource resource = null;
+
+        try {
+            resource = fileDownloadUtil.getFileAsResource(fileCode);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+
+        if (resource == null) {
+            return new ResponseEntity<>("File not found ", HttpStatus.NOT_FOUND);
+        }
+
+        String contentType = "application/octet-stream";
+        String headerValue = "attachment; filename=\"" + resource.getFilename() + "\"";
+
+        return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(contentType))
+        .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
+        .body(resource);
+
+    }
 
      /**
       * Método de eliminar de Victor
