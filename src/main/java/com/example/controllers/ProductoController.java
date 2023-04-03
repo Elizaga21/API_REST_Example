@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -170,8 +171,10 @@ public class ProductoController {
      */
     @PostMapping(consumes = "multipart/form-data") //El consumes es para añadir imagenes y otro tipo de documentos - Viene dentro de la petición, no viene parámetros con el POST
     @Transactional
-    public ResponseEntity<Map<String, Object>> insert(@Valid @RequestBody Producto producto, BindingResult result,
-    @RequestParam(name = "file") MultipartFile file) throws IOException { // En el cuepo de la peticion va el objeto
+    public ResponseEntity<Map<String, Object>> insert(@Valid 
+    @RequestPart(name = "producto") Producto producto,
+    BindingResult result,
+    @RequestPart(name = "file") MultipartFile file) throws IOException { // En el cuepo de la peticion va el objeto
                                                                                                                     
         Map<String, Object> responseAsMap = new HashMap<>();
 
