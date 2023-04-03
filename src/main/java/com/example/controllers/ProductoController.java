@@ -220,7 +220,7 @@ public class ProductoController {
             FileUploadResponse fileUploadResponse = FileUploadResponse
             .builder()
             .fileName(fileCode + "-" + file.getOriginalFilename())
-            .downLoadURI("/productos/downloadFile" + fileCode + "-" + file.getOriginalFilename())
+            .downLoadURI("/productos/downloadFile/" + fileCode + "-" + file.getOriginalFilename())
             .size(file.getSize())
             .build();
 
