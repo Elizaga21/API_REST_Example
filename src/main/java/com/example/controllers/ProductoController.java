@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
@@ -182,6 +183,7 @@ public class ProductoController {
      y genera una exception MediaTypeNotSupported
      * @throws IOException
      */
+    @Secured("ADMIN")
     @PostMapping(consumes = "multipart/form-data") //El consumes es para añadir imagenes y otro tipo de documentos - Viene dentro de la petición, no viene parámetros con el POST
     @Transactional
     public ResponseEntity<Map<String, Object>> insert(@Valid 
