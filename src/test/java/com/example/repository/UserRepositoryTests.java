@@ -15,6 +15,7 @@ import com.example.user.UserRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Optional;
 
 @DataJpaTest //Sólo comprueba la capa repositorio
 @AutoConfigureTestDatabase(replace = Replace.NONE) //Utiliza otra base de datos externa para hacer las pruebas
@@ -81,6 +82,7 @@ public class UserRepositoryTests {
     @Test
     public void testFindAllUsers() {
 
+
         //given
 
         User user1 = User.builder()
@@ -105,4 +107,58 @@ public class UserRepositoryTests {
 
 
     }
+
+    @DisplayName("Test para recuperar un user por ID")
+    @Test
+    public void testFindUserById() {
+        //given
+        userRepository.save(user0);
+        //when
+        User user = userRepository.findById(user0.getId()).get();
+        //then
+        assertThat(user.getId()).isNotEqualTo(0L);
+    }
+
+    @DisplayName("Test para actualizar un user")
+    @Test
+    public void testUpdateUser() {
+
+          //given
+
+          userRepository.save(user0);
+
+          //when
+
+          User userGuardado = userRepository.findByEmail(user0.getEmail()).get();
+          userGuardado.setFirstName("Juan");
+          userGuardado.setLastName("Rodriguez");
+          userGuardado.setEmail("haha@gmail.com");
+
+          User userUpdated = userRepository.save(userGuardado);
+
+          //then
+
+          assertThat(userUpdated.getEmail()).isEqualTo("haha@gmail.com");
+          assertThat(userUpdated.getFirstName()).isEqualTo("Juan");
+    }
+
+    @DisplayName("Test para borrar un user")
+    @Test
+    public void testDeleteUser() {
+
+        //given
+
+        userRepository.save(user0);
+
+
+        //when
+
+        userRepository.delete(user0);
+
+        Optional<User> optionalUser = userRepository.findByEmail(user0.getEmail());
+        //then
+
+        assertThat(optionalUser).isEmpty();
+    }
+
 }
