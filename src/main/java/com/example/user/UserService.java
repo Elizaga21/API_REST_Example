@@ -9,6 +9,7 @@ public interface UserService {
     void deleteByEmail(String email);
     User findByEmail(String email);
     User update(User user);
+    
 
     
 }

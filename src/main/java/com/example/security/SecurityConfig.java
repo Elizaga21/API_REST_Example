@@ -42,9 +42,9 @@ public class SecurityConfig {
     }
 
     //esta contraseña es la de Postman, para crear la contraseña del usuario
-    // public static void main(String[] args) {
-    //     System.out.println( new SecurityConfig().passwordEncoder().encode("123456"));
-    // }
+     public static void main(String[] args) {
+        System.out.println( new SecurityConfig().passwordEncoder().encode("Temp2023$$"));
+    }
     //se debe poner static en el  PasswordEncoder passwordEncoder() porque vive en el plano de la instancia porque no
     //puede existir hasta que no se instancia
     //
