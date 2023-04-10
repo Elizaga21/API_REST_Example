@@ -20,6 +20,7 @@ public class UserController {
         return new ResponseEntity<>(userService.findAll(), HttpStatus.FOUND);
     }
     @PostMapping("/add")
+    @Transactional
     public ResponseEntity<User> add(@RequestBody User user){
         return ResponseEntity.ok(userService.add(user));
     }
