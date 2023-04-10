@@ -30,7 +30,7 @@ public class MyUserDetails implements UserDetails {
 
         //crear un rol con un sólo permiso
 
-        authorities = Arrays.stream(Role.values().toString().split(","))
+        authorities = Arrays.stream(user.getRole().toString().split(","))
         .map(SimpleGrantedAuthority::new)
         .collect(Collectors.toList());
 
