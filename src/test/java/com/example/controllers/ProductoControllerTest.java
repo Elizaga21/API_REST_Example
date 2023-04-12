@@ -19,6 +19,7 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.mockito.ArgumentMatchers.any;
 
 // Para seguir el enfoque BDD con Mockito
+// Para importar directamente el metodo, el import static
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -33,19 +34,20 @@ import com.example.utilities.FileUploadUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 //@WebMvcTest
+//La interface estrella que implementa MVC se llama ApplicationContext
 @SpringBootTest //da acceso a todos los beans
 @AutoConfigureMockMvc
-@AutoConfigureTestDatabase(replace = Replace.NONE) //no utilizar la base de datos en memoria
+@AutoConfigureTestDatabase(replace = Replace.NONE) //no utilizar la base de datos en memoria,se utiliza la de Comercio
 public class ProductoControllerTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mockMvc; //Inyecta los verbos de Http
 
     @MockBean
-    private ProductoService productoService;
+    private ProductoService productoService; //Simula el bean de capa de productoService
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper; //Coge un objeto de java y lo convierte en un Json. Serializa (objeto a un flujo)
 
     @MockBean
     private FileUploadUtil fileUploadUtil;
@@ -56,7 +58,7 @@ public class ProductoControllerTest {
     @Autowired
     private WebApplicationContext context;
 
-    @BeforeEach
+    @BeforeEach //Se crea el contexto y mockito está listo para los endpoints
     public void setUp() {
 
         mockMvc = MockMvcBuilders.webAppContextSetup(context)
@@ -66,7 +68,7 @@ public class ProductoControllerTest {
 
     @Test
     void testGuardarProducto() throws Exception {
-        // given
+        // given - Datos dados
         Presentacion presentacion = Presentacion.builder()
                 .descripcion(null)
                 .nombre("docena")
@@ -87,7 +89,7 @@ public class ProductoControllerTest {
                 given(productoService.save(any(Producto.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        // when
+        // when - Accion
         String jsonStringProduct = objectMapper.writeValueAsString(producto);
         System.out.println(jsonStringProduct);
         ResultActions response = mockMvc
@@ -95,9 +97,9 @@ public class ProductoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonStringProduct));
 
-        // then
+        // then - Resulta esperado
         response.andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized()); //se espera un Unauthorized por el endpoint
         // .andExpect()
         // .andExpect(jsonPath("$.nombre", is(producto.getNombre())))
         // .andExpect(jsonPath("$.descripcion", is(producto.getDescripcion())));
