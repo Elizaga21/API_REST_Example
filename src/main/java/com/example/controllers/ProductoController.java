@@ -184,7 +184,8 @@ public class ProductoController {
      * @throws IOException
      */
     @Secured("ADMIN")
-    @PostMapping(consumes = "multipart/form-data") //El consumes es para añadir imagenes y otro tipo de documentos - Viene dentro de la petición, no viene parámetros con el POST
+    @PostMapping(consumes = {"multipart/form-data", "application/json"}) 
+    //El consumes es para añadir imagenes y otro tipo de documentos - Viene dentro de la petición, no viene parámetros con el POST
     @Transactional
     public ResponseEntity<Map<String, Object>> insert(@Valid 
     @RequestPart(name = "producto") Producto producto,
