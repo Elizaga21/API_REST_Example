@@ -172,89 +172,93 @@ public class ProductoController {
 
     }
 
+    
     /**
      * Persiste un producto en la base de datos
-     * 
-     * // Guardar (Persistir), un producto, con su presentacion en la base de datos
-     Para probarlo con POSTMAN: Body -> form-data -> producto -> CONTENT TYPE ->
-     application/json
-     no se puede dejar el content type en Auto, porque de lo contrario asume
-     application/octet-stream
-     y genera una exception MediaTypeNotSupported
      * @throws IOException
-     */
-    @Secured("ADMIN")
-    @PostMapping(consumes = {"multipart/form-data", "application/json"}) 
-    //El consumes es para añadir imagenes y otro tipo de documentos - Viene dentro de la petición, no viene parámetros con el POST
+     * 
+     * */
+    // Guardar (Persistir), un producto, con su presentacion en la base de datos
+    // Para probarlo con POSTMAN: Body -> form-data -> producto -> CONTENT TYPE ->
+    // application/json
+    // no se puede dejar el content type en Auto, porque de lo contrario asume
+    // application/octet-stream
+    // y genera una exception MediaTypeNotSupported
+    // @Secured("ADMIN")
+    // @PostMapping( consumes = "multipart/form-data" )
+    @PostMapping( consumes = {"multipart/form-data",
+                              "application/json"})
     @Transactional
-    public ResponseEntity<Map<String, Object>> insert(@Valid 
-    @RequestPart(name = "producto") Producto producto,
-    BindingResult result,
-    @RequestPart(name = "file") MultipartFile file) throws IOException { // En el cuepo de la peticion va el objeto
-                                                                                                                    
-        Map<String, Object> responseAsMap = new HashMap<>();
+    public ResponseEntity<Map<String, Object>> insert(
+        @Valid 
+        @RequestPart(name = "producto") Producto producto, 
+        BindingResult result,  
+        @RequestPart(name = "file", required = false) MultipartFile file) throws IOException {
 
+        Map<String, Object> responseAsMap = new HashMap<>();
         ResponseEntity<Map<String, Object>> responseEntity = null;
 
         /**
-         * Primero: Comprobar si hay errores en el producto recibido - VALIDACION
+         * Primero: Comprobar si hay errores en el producto recibido
          */
+        if(result.hasErrors()) {
+            List<String>  errorMessages = new ArrayList<>();
 
-        if (result.hasErrors()) {
-            List<String> errorMessage = new ArrayList<>();
-
-            for (ObjectError error : result.getAllErrors()) {
-                errorMessage.add(error.getDefaultMessage()); // Muestras los mensajes de la Entity Producto
-
+            for(ObjectError error : result.getAllErrors()) {
+                errorMessages.add(error.getDefaultMessage());
             }
-            responseAsMap.put("errores", errorMessage);
 
-            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+            responseAsMap.put("errores", errorMessages);
+
+            responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+
             return responseEntity;
         }
 
-        //Si no hay errores persistimos el producto, comprobando previamente si nos han enviado un archivo o imagen
-        if (!file.isEmpty()) {
+        // Si no hay errores, entonces persistimos el producto,
+        // comprobando previamente si nos han enviado una imagen
+        // , o un archivo.
+        if(!file.isEmpty()) {
             String fileCode = fileUploadUtil.saveFile(file.getOriginalFilename(), file);
-            producto.setImagenProducto(fileCode + "-" + file.getOriginalFilename());
+            producto.setImagenProducto(fileCode+ "-" + file.getOriginalFilename());
 
-            //Devolver respecto al file recibido
+            // Devolver informacion respecto al file recibido
 
             FileUploadResponse fileUploadResponse = FileUploadResponse
-            .builder()
-            .fileName(fileCode + "-" + file.getOriginalFilename())
-            .downLoadURI("/productos/downloadFile/" + fileCode + "-" + file.getOriginalFilename())
-            .size(file.getSize())
-            .build();
+                       .builder()
+                       .fileName(fileCode + "-" + file.getOriginalFilename())
+                       .downLoadURI("/productos/downloadFile/" 
+                                 + fileCode + "-" + file.getOriginalFilename())
+                       .size(file.getSize())
+                       .build();
+            
+            responseAsMap.put("info de la imagen: ", fileUploadResponse);           
 
-            responseAsMap.put("info de la imagen:", fileUploadResponse);
         }
 
-        Producto productoDataBase = productoService.save(producto);
+        Producto productoDB =  productoService.save(producto);
+
         try {
-            if (productoDataBase != null) {
+            if(productoDB != null) {
                 String mensaje = "El producto se ha creado correctamente";
                 responseAsMap.put("mensaje", mensaje);
-                responseAsMap.put("producto", productoDataBase);
-                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.CREATED);
+                responseAsMap.put("producto", productoDB);
+                responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.CREATED);
             } else {
                 // No se ha creado el producto
-                String mensaje2 = "El producto no se ha creado";
-                responseAsMap.put("mensaje", mensaje2);
-                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap,
-                        HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            }            
         } catch (DataAccessException e) {
-            String errorGrave = "Ha tenido lugar un error grave" + "la causa puede ser "
-                    + e.getMostSpecificCause(); // especifica la causa especifica del error.
+            String errorGrave = "Ha tenido lugar un error grave " 
+                                  + ", y la causa mas probable puede ser " +
+                                     e.getMostSpecificCause();
             responseAsMap.put("errorGrave", errorGrave);
-
-            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+            responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, 
+                              HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        // Si no hay errores se ejecuta este return, se persiste el producto
         return responseEntity;
     }
+
     /**
      * Método para actualizar un producto
      */
